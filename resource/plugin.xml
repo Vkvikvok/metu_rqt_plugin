@@ -1,0 +1,25 @@
+<library path="/home/volki/meturover_24/src">
+  <class name="Simple Plugin" type="metu_rqt_plugin.plugin_example.SimplePlugin" base_class_type="rqt_gui_py::Plugin">
+    <description>
+      RQt eklenti denemesi.
+    </description>
+    <qtgui>
+      <group>
+        <label>Visualization</label>
+      </group>
+      <label>Simple Plugin</label>
+    </qtgui>
+  </class>
+
+  <class name="Competition Map" type="metu_rqt_plugin.competition_map_plugin.CompetitionMap" base_class_type="rqt_gui_py::Plugin">
+    <description>
+      Haritada yarışma alanı gözükecek ve roverın gitmesi gereken konumlar işaretlenebilecek
+    </description>
+    <qtgui>
+      <group>
+        <label>Rover</label>
+      </group>
+      <label>Competition Map</label>
+    </qtgui>
+  </class>
+</library>

@@ -4,7 +4,7 @@ from python_qt_binding.QtWidgets import QApplication, QWidget, QGraphicsScene, Q
 from python_qt_binding.QtGui import QDoubleValidator, QKeySequence, QImage, QPixmap
 from python_qt_binding.QtCore import Qt
 # Özelleştirilmiş elemanlar
-from metu_rqt_plugin.custom_plugin_widgets import CustomGraphicsView, MyTableModel, CustomTableView
+from metu_rqt_plugin.custom_plugin_widgets_test import CustomGraphicsView, MyTableModel, CustomTableView
 from metu_rqt_plugin.ui.competition_map_ui import CompetitionMapUi
 from rqt_gui.main import Main
 import sys
@@ -30,7 +30,7 @@ class MyWidget(QWidget):
         # Yarışma alanının haritasını gösteren parça
         try:
             self.scene = QGraphicsScene()
-            self.customCompetitionMap = CustomGraphicsView(self.scene, box_x=self.ui.send_x, box_y=self.ui.send_y) ###########
+            self.customCompetitionMap = CustomGraphicsView(self.scene, box_x=self.ui.send_x, box_y=self.ui.send_y)
 
             # Layout'taki eski QGraphicsView'i kaldır ve yeni CustomGraphicsView'i ekle
             layout = self.ui.competitionMap.parentWidget().layout() 
@@ -38,7 +38,9 @@ class MyWidget(QWidget):
             self.ui.competitionMap.deleteLater()  # Orijinal QGraphicsView'i temizle
 
             # Görseli yükle
-            self.customCompetitionMap.load_image('/home/volki/meturover_24/src/metu_rqt_plugin/metu_rqt_plugin/images/competition_map.jpg')
+            self.customCompetitionMap.load_image('/home/volki/meturover_24/src/metu_rqt_plugin/metu_rqt_plugin/images/new_map.jpg')
+
+            
 
         except Exception as e:
             print(f"There is an error in loading competition map: {e}")
@@ -49,11 +51,11 @@ class MyWidget(QWidget):
             self.model = MyTableModel()
             self.locationList = CustomTableView()
             self.locationList.setModel(self.model) # Özelleştirilmiş "QTableView" elemanını çağırıyoruz
-            
+
             # Layout'taki eski QTableView elemanını kaldır ve yeni CustomTableView elemanını ekle
             layout = self.ui.location_widgets_layout
             layout.replaceWidget(self.ui.location_list, self.locationList)
-            self.ui.location_list.deleteLater()  # Orijinal QGraphicsView'i temizle
+            self.ui.location_list.deleteLater()  # Orijinal QTableView'i temizle
 
             # Tablo sütunlarının arayüze daha uygun şekilde boyutlanmasını sağlar
             self.locationList.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
@@ -82,6 +84,14 @@ class MyWidget(QWidget):
         except Exception as e:
             print(f"There is an error in coordination boxes:{e}")
 
+        # Tablonun değişme sinyali alınıp harita üzerinden noktalar yenileniyor
+        self.model.dataChanged.connect(self.update_graphics_view)
+
+    def update_graphics_view(self):
+        print("Veriler değiştirildi")
+        data = [self.model._data[i] for i in range(self.model.rowCount())]
+        self.customCompetitionMap.update_points(data)
+
     # "Go/Cancel" butonunun tetiklediği fonksiyon
     # İlk tıklandığında rover ilk satırdaki konuma gitmeye başlar ve bu sırada gittiği konum tabloda yeşil renk ile gözükür
     # İkinci kere tıklandığında ise bu eylem iptal edilir
@@ -105,6 +115,7 @@ class MyWidget(QWidget):
             # Kutucukların boş olup olmadığı kontrol edilir ve verinin gönderildiği durumda kutucuklar temizlenir
             if send_x_data != None and send_y_data != None:
                 self.model.addData(new_row)
+                self.customCompetitionMap.add_point(send_x_data, send_y_data, str(self.model.rowCount()))   
                 self.ui.send_x.clear()
                 self.ui.send_y.clear()
 
@@ -116,7 +127,6 @@ class MyWidget(QWidget):
 
     # "Delete" tuşuna basıldığında tabloda seçilmiş satır silinir
     def keyPressEvent(self, event):
-        print(f"Pressed key: {event.key()}")
         if event.key() == Qt.Key_Delete:
             self.delete_selected_rows()
 
@@ -127,6 +137,8 @@ class MyWidget(QWidget):
             row = selected_indexes[0].row()
             self.model.removeRow(row)
             self.locationList.selectionModel().clearSelection()
+            self.customCompetitionMap.remove_point(row) # Noktanın silinmesi
+            self.update_graphics_view() # Haritanın güncellenmesi
     
         except Exception as e:
             print(f"There is an error in delete_selected_rows: {e}")
@@ -135,6 +147,7 @@ class MyWidget(QWidget):
     def mousePressEvent(self, event):
         if self.locationList.rect().contains(event.pos()):
             # Tıklama tablo üzerinde ise, herhangi bir işlem yapılmaz
+            self.customCompetitionMap.update_labels()
             super().mousePressEvent(event)
         else:
             # Tıklama tablo dışında ise, tablo seçimini temizleyin

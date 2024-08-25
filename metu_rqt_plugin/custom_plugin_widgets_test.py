@@ -2,7 +2,7 @@
 # elemanlar ui dosyasındaki asıl eleman sınfıyla değiştirilmiştir.
 
 from python_qt_binding.QtWidgets import QGraphicsView, QGraphicsPixmapItem, QTableView, QGraphicsEllipseItem, QGraphicsTextItem
-from python_qt_binding.QtCore import Qt, QRectF, QAbstractTableModel, QModelIndex, QVariant, QMimeData, QDataStream, QByteArray
+from python_qt_binding.QtCore import Qt, QRectF, QAbstractTableModel, QModelIndex, QVariant, QMimeData, QDataStream, QByteArray, pyqtSignal
 from python_qt_binding.QtGui import QPainter, QPixmap, QDrag, QBrush, QColor, QStandardItemModel, QStandardItem, QPen
 
 # İçerisinde harita öğelerini taşıyacak özelleştirilmiş eleman
@@ -17,9 +17,25 @@ class CustomGraphicsView(QGraphicsView):
         self.setSceneRect(self.scene().itemsBoundingRect())
         self.setDragMode(QGraphicsView.NoDrag)
         self._isPanning = False
+
+        # Koordinat verilerinin gözüktüğü kutucuklar
         self.box_x = box_x
         self.box_y = box_y
-        self.points = []
+
+        self.points = [] # Gidilecek konumların listesi
+
+##################################
+        # Roverın konumunu gösteren markerın ayarları
+        start_position_x = 0 # Bu ikisi GPS'den çekilmeye çalışılabilir!!!!!!!!!!!!!!!!!!!!
+        start_position_y = 0
+        self.rover_marker = QGraphicsEllipseItem(start_position_x, start_position_y, 10, 10)
+        self.rover_marker.setBrush(Qt.blue)
+        self.scene.addItem(self.rover_marker)
+###################################
+
+    #Roverın konumunu güncelleyecek fonksiyon
+    def update_robot_position(self, x, y):
+        self.robot_marker.setPos(x, y)
 
     #Panning 
     def mousePressEvent(self, event):
@@ -118,10 +134,12 @@ class CustomGraphicsView(QGraphicsView):
             self.scene().removeItem(text)
 
     # Tablo güncellendiğinde haritadaki noktaları yeniden numaralandır
-    def update_labels(self):
-        for i, (_, text) in enumerate(self.points):
-            text.setPlainText(str(i + 1))
-
+    def update_points(self, data):
+        for index, (item, label) in enumerate(self.points):
+            x, y = data[index]
+            item.setRect(x - 5, y - 5, 10, 10)
+            label.setPos(x + 10, y)
+            label.setPlainText(str(index + 1))
 
 # İçerisinde roverın gitmesi gereken konumları içeren tablonun modeli
 class MyTableModel(QAbstractTableModel):

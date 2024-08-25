@@ -1,9 +1,9 @@
 # Bu dosyada bazı arayüz elemanlarına ek özellikler tanımlanmaktadır ve sonrasında değiştirilmiş
 # elemanlar ui dosyasındaki asıl eleman sınfıyla değiştirilmiştir.
 
-from python_qt_binding.QtWidgets import QGraphicsView, QGraphicsPixmapItem, QTableView
-from python_qt_binding.QtCore import Qt, QRectF, QAbstractTableModel, QModelIndex, QVariant, QMimeData, QDataStream, QByteArray
-from python_qt_binding.QtGui import QPainter, QPixmap, QDrag, QBrush, QColor
+from python_qt_binding.QtWidgets import QGraphicsView, QGraphicsPixmapItem, QTableView, QGraphicsEllipseItem, QGraphicsTextItem
+from python_qt_binding.QtCore import Qt, QRectF, QAbstractTableModel, QModelIndex, QVariant, QMimeData, QDataStream, QByteArray, pyqtSignal
+from python_qt_binding.QtGui import QPainter, QPixmap, QDrag, QBrush, QColor, QStandardItemModel, QStandardItem, QPen
 
 # İçerisinde harita öğelerini taşıyacak özelleştirilmiş eleman
 class CustomGraphicsView(QGraphicsView):
@@ -19,6 +19,7 @@ class CustomGraphicsView(QGraphicsView):
         self._isPanning = False
         self.box_x = box_x
         self.box_y = box_y
+        self.points = []
 
     #Panning 
     def mousePressEvent(self, event):
@@ -96,6 +97,33 @@ class CustomGraphicsView(QGraphicsView):
 
         except Exception as e:
             print(f"Error in load_image: {e}")
+
+    # Haritada gidilecek konumlara nokta ekleme
+    def add_point(self, x, y, label):
+        
+        point_radius = 5
+        ellipse = QGraphicsEllipseItem(QRectF(x - point_radius, y - point_radius, point_radius * 2, point_radius * 2))
+        ellipse.setBrush(Qt.red)
+        text = QGraphicsTextItem(label)
+        text.setPos(x + 5, y - 5)
+        self.scene().addItem(ellipse)
+        self.scene().addItem(text)
+        self.points.append((ellipse, text))
+
+    # Haritadaki noktalardan birisini sil
+    def remove_point(self, index):
+        if 0 <= index < len(self.points):
+            ellipse, text = self.points.pop(index)
+            self.scene().removeItem(ellipse)
+            self.scene().removeItem(text)
+
+    # Tablo güncellendiğinde haritadaki noktaları yeniden numaralandır
+    def update_points(self, data):
+        for index, (item, label) in enumerate(self.points):
+            x, y = data[index]
+            item.setRect(x - 5, y - 5, 10, 10)
+            label.setPos(x + 10, y)
+            label.setPlainText(str(index + 1))
 
 # İçerisinde roverın gitmesi gereken konumları içeren tablonun modeli
 class MyTableModel(QAbstractTableModel):

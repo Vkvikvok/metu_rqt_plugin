@@ -1,11 +1,15 @@
 from rqt_gui_py.plugin import Plugin
 from ament_index_python.packages import get_package_share_directory
-from python_qt_binding.QtWidgets import QApplication, QWidget, QGraphicsScene, QGraphicsView, QLineEdit, QHeaderView, QTableView
-from python_qt_binding.QtGui import QDoubleValidator, QKeySequence, QImage, QPixmap
-from python_qt_binding.QtCore import Qt
+from python_qt_binding.QtWidgets import QApplication, QWidget, QGraphicsScene, QGraphicsView, QLineEdit, QHeaderView, QTableView, QGraphicsEllipseItem
+from python_qt_binding.QtGui import QDoubleValidator, QKeySequence, QImage, QPixmap, QBrush, QColor
+from python_qt_binding.QtCore import Qt, QPointF
+import rclpy
+from rclpy.context import Context
 # Özelleştirilmiş elemanlar
-from metu_rqt_plugin.custom_plugin_widgets_test import CustomGraphicsView, MyTableModel, CustomTableView
+from metu_rqt_plugin.custom_plugin_widgets import CustomGraphicsView, MyTableModel, CustomTableView
 from metu_rqt_plugin.ui.competition_map_ui import CompetitionMapUi
+from metu_rqt_plugin.gui_gps_subscriber_thread import GPSSubscriberThread
+
 from rqt_gui.main import Main
 import sys
 import os
@@ -18,6 +22,10 @@ class CompetitionMap(Plugin):
         # Ana widget'ı oluştur ve ayarlarını yap
         self._widget = MyWidget()
         context.add_widget(self._widget)
+
+    def shutdown_plugin(self):
+        # Widget'ı ve iş parçacığını durdur
+        self._widget.shutdown()
 
 class MyWidget(QWidget):
     def __init__(self):
@@ -39,8 +47,6 @@ class MyWidget(QWidget):
 
             # Görseli yükle
             self.customCompetitionMap.load_image('/home/volki/meturover_24/src/metu_rqt_plugin/metu_rqt_plugin/images/new_map.jpg')
-
-            
 
         except Exception as e:
             print(f"There is an error in loading competition map: {e}")
@@ -84,14 +90,52 @@ class MyWidget(QWidget):
         except Exception as e:
             print(f"There is an error in coordination boxes:{e}")
 
-        # Tablonun değişme sinyali alınıp harita üzerinden noktalar yenileniyor
-        self.model.dataChanged.connect(self.update_graphics_view)
+        # Harita üzerinde rover ve gidilecek konumların işlenmesi ve gösterilmesi
+        try:
+            # GPS sinyali ile roverın konumunu almak için GPSSubscriberThread başlatılıyor
+            self.context = Context()
+            self.gps_thread = GPSSubscriberThread(self.context, 
+                                                  self.customCompetitionMap.map_item.pixmap().width(), 
+                                                  self.customCompetitionMap.map_item.pixmap().height())
+            self.gps_thread.gps_signal.connect(self.update_position)  # Sinyali bağla
+            self.gps_thread.start()
 
+            # Roverın konumunu gösterecek markerın tanımlanması
+            self.rover_marker = None
+
+            # Tablonun değişme sinyali alınıp harita üzerinden noktalar yenileniyor
+            self.model.dataChanged.connect(self.update_graphics_view)
+
+        except Exception as e:
+            print(f"There is an error in presentation of location points and rover location:{e}")
+     
+
+    # Harita üzerindeki konum noktaları güncelleniyor
     def update_graphics_view(self):
         print("Veriler değiştirildi")
         data = [self.model._data[i] for i in range(self.model.rowCount())]
         self.customCompetitionMap.update_points(data)
 
+    # Roverın konumu güncelleniyor
+    def update_position(self, x_pixel, y_pixel):
+        try:
+            if self.rover_marker is None:
+                self.rover_marker = QGraphicsEllipseItem(-5, -5, 10, 10)  # Marker size x_pixel, y_pixel
+                self.rover_marker.setBrush(QBrush(QColor('blue')))
+                self.customCompetitionMap.scene.addItem(self.rover_marker)
+                print("Rover markerı oluşturuldu")
+            else:
+                scene_rect = self.customCompetitionMap.sceneRect()  # Sahne dikdörtgeni
+
+                # Piksel koordinatlarını sahne koordinatlarına manuel olarak dönüştür
+                scene_x = (x_pixel / self.customCompetitionMap.map_item.pixmap().width()) * scene_rect.width()
+                scene_y = (y_pixel / self.customCompetitionMap.map_item.pixmap().height()) * scene_rect.height()
+                scene_point = QPointF(scene_x, scene_y)
+                self.rover_marker.setPos(scene_point) 
+                
+        except Exception as e:
+            print(f"There is an error in updating rover marker position:{e}")
+        
     # "Go/Cancel" butonunun tetiklediği fonksiyon
     # İlk tıklandığında rover ilk satırdaki konuma gitmeye başlar ve bu sırada gittiği konum tabloda yeşil renk ile gözükür
     # İkinci kere tıklandığında ise bu eylem iptal edilir
@@ -152,6 +196,11 @@ class MyWidget(QWidget):
         else:
             # Tıklama tablo dışında ise, tablo seçimini temizleyin
             self.locationList.selectionModel().clearSelection()
+
+
+    def shutdown(self):
+        # İş parçacığını durdur
+        self.gps_thread.stop()
 
 
 def main():

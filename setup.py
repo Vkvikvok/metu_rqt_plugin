@@ -22,7 +22,14 @@ setup(
     entry_points={
         'console_scripts': [
             "plugin_example = metu_rqt_plugin.plugin_example:main",
-            "competition_map_plugin = metu_rqt_plugin.competition_map_plugin:main"
+            "competition_map_plugin = metu_rqt_plugin.competition_map_plugin:main",
+            "topic_controller_plugin = metu_rqt_plugin.topic_controller_plugin:main",
+            "camera_data_publisher = metu_rqt_plugin.demo_nodes.camera_data_publisher:main",
+            "rover_gps_publisher = metu_rqt_plugin.demo_nodes.rover_gps_publisher:main",
+            "rover_gps_subscriber = metu_rqt_plugin.demo_nodes.rover_gps_subscriber:main",
+            "gui_gps_publisher = metu_rqt_plugin.demo_nodes.gui_gps_publisher:main",
+            "gui_gps_subscriber_thread = metu_rqt_plugin.gui_gps_subscriber_thread:main",
+            "demo_sensor_publisher = metu_rqt_plugin.demo_nodes.demo_sensor_publisher:main"
         ],
     },
 )

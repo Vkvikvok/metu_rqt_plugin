@@ -22,4 +22,17 @@
       <label>Competition Map</label>
     </qtgui>
   </class>
+
+  <class name="Topic Controller" type="metu_rqt_plugin.topic_controller_plugin.TopicController" base_class_type="rqt_gui_py::Plugin">
+    <description>
+      Belirli topiclerin durumunun kontrol edilmesine yardım edecek bir eklenti
+    </description>
+    <qtgui>
+      <group>
+        <label>Rover</label>
+      </group>
+      <label>Topic Controller</label>
+    </qtgui>
+  </class>
+
 </library>

@@ -1,7 +1,7 @@
 # Bu dosyada bazı arayüz elemanlarına ek özellikler tanımlanmaktadır ve sonrasında değiştirilmiş
 # elemanlar ui dosyasındaki asıl eleman sınfıyla değiştirilmiştir.
 
-from python_qt_binding.QtWidgets import QGraphicsView, QGraphicsPixmapItem, QTableView, QGraphicsEllipseItem, QGraphicsTextItem
+from python_qt_binding.QtWidgets import QGraphicsView, QGraphicsPixmapItem, QTableView, QGraphicsEllipseItem, QGraphicsTextItem, QListView
 from python_qt_binding.QtCore import Qt, QRectF, QAbstractTableModel, QModelIndex, QVariant, QMimeData, QDataStream, QByteArray, pyqtSignal
 from python_qt_binding.QtGui import QPainter, QPixmap, QDrag, QBrush, QColor, QStandardItemModel, QStandardItem, QPen
 
@@ -14,28 +14,13 @@ class CustomGraphicsView(QGraphicsView):
         self.setRenderHint(QPainter.SmoothPixmapTransform)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.setSceneRect(self.scene().itemsBoundingRect())
         self.setDragMode(QGraphicsView.NoDrag)
+        self.scene = scene
+        self.setScene(self.scene)
         self._isPanning = False
-
-        # Koordinat verilerinin gözüktüğü kutucuklar
         self.box_x = box_x
         self.box_y = box_y
-
-        self.points = [] # Gidilecek konumların listesi
-
-##################################
-        # Roverın konumunu gösteren markerın ayarları
-        start_position_x = 0 # Bu ikisi GPS'den çekilmeye çalışılabilir!!!!!!!!!!!!!!!!!!!!
-        start_position_y = 0
-        self.rover_marker = QGraphicsEllipseItem(start_position_x, start_position_y, 10, 10)
-        self.rover_marker.setBrush(Qt.blue)
-        self.scene.addItem(self.rover_marker)
-###################################
-
-    #Roverın konumunu güncelleyecek fonksiyon
-    def update_robot_position(self, x, y):
-        self.robot_marker.setPos(x, y)
+        self.points = []
 
     #Panning 
     def mousePressEvent(self, event):
@@ -105,11 +90,12 @@ class CustomGraphicsView(QGraphicsView):
     #Harita görselini yükleme
     def load_image(self, image_path):
         try:
-            pixmap = QPixmap(image_path)
-            scaled_pixmap = pixmap.scaled(self.viewport().size(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
-            self.scene().clear()
-            self.scene().addPixmap(scaled_pixmap)
-            self.setSceneRect(QRectF(pixmap.rect()))
+            self.pixmap = QPixmap(image_path)
+            scaled_pixmap = self.pixmap.scaled(self.viewport().size(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            self.scene.clear()
+            self.map_item = QGraphicsPixmapItem(scaled_pixmap)
+            self.scene.addItem(self.map_item)
+            self.scene.setSceneRect(self.map_item.boundingRect())
 
         except Exception as e:
             print(f"Error in load_image: {e}")
@@ -122,16 +108,16 @@ class CustomGraphicsView(QGraphicsView):
         ellipse.setBrush(Qt.red)
         text = QGraphicsTextItem(label)
         text.setPos(x + 5, y - 5)
-        self.scene().addItem(ellipse)
-        self.scene().addItem(text)
+        self.scene.addItem(ellipse)
+        self.scene.addItem(text)
         self.points.append((ellipse, text))
 
     # Haritadaki noktalardan birisini sil
     def remove_point(self, index):
         if 0 <= index < len(self.points):
             ellipse, text = self.points.pop(index)
-            self.scene().removeItem(ellipse)
-            self.scene().removeItem(text)
+            self.scene.removeItem(ellipse)
+            self.scene.removeItem(text)
 
     # Tablo güncellendiğinde haritadaki noktaları yeniden numaralandır
     def update_points(self, data):
@@ -240,3 +226,23 @@ class CustomTableView(QTableView):
                 self.model().clearSelection()
                 self.double_clicked_row = None
         super(CustomTableView, self).mousePressEvent(event)
+
+
+class CustomListView(QListView):
+    def __init__(self, model):
+        super(CustomListView, self).__init__()
+        self.setModel(model)
+        self.setSelectionMode(QListView.NoSelection)  # Seçimi tamamen kapatmak için
+        self.setEditTriggers(QListView.NoEditTriggers)  # Düzenlemeyi kapatmak için
+    
+    def mousePressEvent(self, event):
+        # Eğer sağ tıklama ise
+        if event.button() == Qt.RightButton:
+            index = self.indexAt(event.pos())
+            if index.isValid():
+                self.model().removeRow(index.row())
+        
+        # Sol tıklamayı yok saymak için mousePressEvent'i çağırmıyoruz
+        # Sağ tıklama dışındaki durumlarda varsayılan davranışı kullanabiliriz
+        else:
+            super(CustomListView, self).mousePressEvent(event)

@@ -6,9 +6,9 @@ from python_qt_binding.QtCore import Qt, QPointF
 import rclpy
 from rclpy.context import Context
 # Özelleştirilmiş elemanlar
-from metu_rqt_plugin.widgets.custom_plugin_widgets import CustomGraphicsView, MyTableModel, CustomTableView
-from metu_rqt_plugin.ui.competition_map_ui import CompetitionMapUi
-from metu_rqt_plugin.threads.gui_gps_subscriber_thread import GPSSubscriberThread
+from .custom_plugin_widgets import CustomGraphicsView, MyTableModel, CustomTableView
+from .competition_map_ui import CompetitionMapUi
+from .gui_gps_subscriber_thread import GPSSubscriberThread
 
 from rqt_gui.main import Main
 import sys
@@ -47,7 +47,7 @@ class MyWidget(QWidget):
 
             # Görseli yükle
             self.base_dir = os.path.dirname(os.path.abspath(__file__))
-            self.customCompetitionMap.load_image(os.path.join(self.base_dir,'images/new_map.jpg'))
+            self.customCompetitionMap.load_image(os.path.join(self.base_dir,'new_map.jpg'))
 
         except Exception as e:
             print(f"There is an error in loading competition map: {e}")
@@ -118,7 +118,7 @@ class MyWidget(QWidget):
         self.customCompetitionMap.update_points(data)
 
     # Roverın konumu güncelleniyor
-    def update_position(self, x_pixel, y_pixel):
+    def update_position(self, x_pixel, y_pixel, lon, lat):
         try:
             if self.rover_marker is None:
                 self.rover_marker = QGraphicsEllipseItem(-5, -5, 10, 10)  # Marker size x_pixel, y_pixel
@@ -134,6 +134,7 @@ class MyWidget(QWidget):
                 scene_point = QPointF(scene_x, scene_y)
                 self.rover_marker.setPos(scene_point) 
                 
+            self.ui.current_coordinates_label.setText(f"Lon: {lon:.4f}   Lat: {lat:.4f}")
         except Exception as e:
             print(f"There is an error in updating rover marker position:{e}")
         
@@ -152,15 +153,17 @@ class MyWidget(QWidget):
     def sendLocation(self): 
         try:
             # x ve y verileri çekilip satır formatına getirildi
-            send_x_data = float(self.ui.send_x.text())
-            send_y_data = float(self.ui.send_y.text())
+            send_lon_data = float(self.ui.send_x.text())
+            send_lat_data = float(self.ui.send_y.text())
+
             
-            new_row = [send_x_data, send_y_data]
+            new_row = [send_lon_data, send_lat_data]
 
             # Kutucukların boş olup olmadığı kontrol edilir ve verinin gönderildiği durumda kutucuklar temizlenir
-            if send_x_data != None and send_y_data != None:
+            if send_lon_data != None and send_lat_data != None:
                 self.model.addData(new_row)
-                self.customCompetitionMap.add_point(send_x_data, send_y_data, str(self.model.rowCount()))   
+                x, y = self.customCompetitionMap.gps_to_pixel(send_lat_data, send_lon_data)
+                self.customCompetitionMap.add_point(x, y, str(self.model.rowCount()))   
                 self.ui.send_x.clear()
                 self.ui.send_y.clear()
 

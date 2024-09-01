@@ -5,7 +5,7 @@
     </description>
     <qtgui>
       <group>
-        <label>Visualization</label>
+        <label>Rover_Deneme</label>
       </group>
       <label>Simple Plugin</label>
     </qtgui>
@@ -17,7 +17,7 @@
     </description>
     <qtgui>
       <group>
-        <label>Rover</label>
+        <label>Rover_Deneme</label>
       </group>
       <label>Competition Map</label>
     </qtgui>
@@ -29,7 +29,7 @@
     </description>
     <qtgui>
       <group>
-        <label>Rover</label>
+        <label>Rover_Deneme</label>
       </group>
       <label>Topic Controller</label>
     </qtgui>
@@ -41,7 +41,7 @@
     </description>
     <qtgui>
       <group>
-        <label>Rover</label>
+        <label>Rover_Deneme</label>
       </group>
       <label>Sensor Plots</label>
     </qtgui>
@@ -53,9 +53,21 @@
     </description>
     <qtgui>
       <group>
-        <label>Rover</label>
+        <label>Rover_Deneme</label>
       </group>
       <label>Sci Hub Controller</label>
+    </qtgui>
+  </class>
+
+  <class name="State Light" type="metu_rqt_plugin.state_light_plugin.StateLight" base_class_type="rqt_gui_py::Plugin">
+    <description>
+      Durum ışığını ayarlamak için oluşturulmuş bir eklenti
+    </description>
+    <qtgui>
+      <group>
+        <label>Rover_Deneme</label>
+      </group>
+      <label>State Light</label>
     </qtgui>
   </class>
 </library>

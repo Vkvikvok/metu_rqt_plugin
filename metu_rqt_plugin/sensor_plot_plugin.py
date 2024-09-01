@@ -11,7 +11,7 @@ import rclpy
 from rclpy.context import Context
 from rqt_gui_py.plugin import Plugin
 # Özelleştirilmiş eleman
-from metu_rqt_plugin.threads.sensor_subscribers_thread import SensorSubscribersThread
+from .sensor_subscribers_thread import SensorSubscribersThread
 
 class SensorPlotPlugin(Plugin):
     def __init__(self, context):
@@ -159,7 +159,7 @@ class MyWidget(QWidget):
 
 
 def main():
-    sys.exit(Main().main(sys.argv, standalone="metu_rqt_plugin.competition_map_plugin"))
+    sys.exit(Main().main(sys.argv, standalone="metu_rqt_plugin.sensor_plot_plugin"))
 
 if __name__ == "__main__":
     main()

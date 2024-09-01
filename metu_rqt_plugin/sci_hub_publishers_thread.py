@@ -81,23 +81,15 @@ class SciHubPublishersThread(QThread):
             self.stop()
 
     def publish_drill_control_message(self, message):
-        msg = Int32()
-        msg.data = message
         self.drill_control_node.publish_message(message)
 
     def publish_sci_plat_control_message(self, message):
-        msg = Int32()
-        msg.data = message
         self.sci_plat_control_node.publish_message(message)
 
     def publish_drill_head_message(self, message):
-        msg = Int32()
-        msg.data = message
         self.drill_head_node.publish_message(message)
 
     def publish_sci_plat_rotation_message(self, message):
-        msg = Int32()
-        msg.data = message
         self.sci_plat_rotation_node.publish_message(message)
 
     def stop(self):

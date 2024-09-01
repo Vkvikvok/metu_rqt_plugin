@@ -8,8 +8,8 @@ import sys
 import os
 from example_interfaces.msg import Int32
 # Özelleştirilmiş elemanlar
-from metu_rqt_plugin.ui.sci_hub_controller_ui import SciHubControllerUi
-from metu_rqt_plugin.threads.sci_hub_publishers_thread import SciHubPublishersThread
+from .sci_hub_controller_ui import SciHubControllerUi
+from .sci_hub_publishers_thread import SciHubPublishersThread
 
 
 class SciHubController(Plugin):
@@ -69,7 +69,7 @@ class MyWidget(QWidget):
         self.sci_hub_publisher_thread.stop()
 
 def main():
-    sys.exit(Main().main(sys.argv, standalone="metu_rqt_plugin.competition_map_plugin"))
+    sys.exit(Main().main(sys.argv, standalone="metu_rqt_plugin.sci_hub_controller_plugin"))
 
 if __name__ == "__main__":
     main()

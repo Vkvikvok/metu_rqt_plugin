@@ -9,9 +9,9 @@ from rqt_gui.main import Main
 import sys
 import os
 # Özelleştirilmiş elemanlar
-from metu_rqt_plugin.ui.topic_controller_ui import Ui_TopicController
-from metu_rqt_plugin.widgets.custom_plugin_widgets import CustomListView
-from metu_rqt_plugin.threads.topic_listener_thread import TopicListenerThread
+from .topic_controller_ui import Ui_TopicController
+from .custom_plugin_widgets import CustomListView
+from .topic_listener_thread import TopicListenerThread
 
 class TopicController(Plugin):
     def __init__(self, context):

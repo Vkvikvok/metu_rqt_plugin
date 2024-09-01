@@ -22,6 +22,15 @@ class CustomGraphicsView(QGraphicsView):
         self.box_y = box_y
         self.points = []
 
+        # Harita bilgileri(Güncellenmeli)
+        # Burada enlemleri ters tanımlamamın sebebi piksellerin de koordinat sisteminin gps enlemine göre ters olması
+        # Enlemlerin negatifleri kullanılacak
+        self.max_lat = -50 # Haritanın sol üst köşesinin derece cinsinden enlemi(Kuzey negatif, Güney pozitif)
+        self.min_lat = -40 # Haritanın sağ alt köşesinin derece cinsinden enlemi
+        self.min_lon = 20 # Haritanın sol üst köşesinin derece cinsinden boylamı(Doğu pozitif, Batı negatif)
+        self.max_lon = 35 # Haritanın sağ alt köşesinin derece cinsinden boylamı
+
+
     #Panning 
     def mousePressEvent(self, event):
         try:
@@ -40,8 +49,10 @@ class CustomGraphicsView(QGraphicsView):
     # Haritadan bir nokta seçildiğinde koordinatlar gerekli kutucuklara otomatik olarak girilir
     def update_coordinates(self, x, y):
         try:
-            self.box_x.setText(f"{x:.4f}")
-            self.box_y.setText(f"{y:.4f}")
+            lon = x*(self.max_lon-self.min_lon)/self.map_item.pixmap().width() + self.min_lon
+            lat = -y*(self.max_lat-self.min_lat)/self.map_item.pixmap().height() + self.max_lat
+            self.box_x.setText(f"{lon:.4f}")
+            self.box_y.setText(f"{-lat:.4f}")
         
         except Exception as e:
             print(f"There is an error in update_coordinates:{e}")
@@ -90,8 +101,8 @@ class CustomGraphicsView(QGraphicsView):
     #Harita görselini yükleme
     def load_image(self, image_path):
         try:
-            pixmap = QPixmap(image_path)
-            scaled_pixmap = pixmap.scaled(self.viewport().size(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            self.pixmap = QPixmap(image_path)
+            scaled_pixmap = self.pixmap.scaled(self.viewport().size(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
             self.scene.clear()
             self.map_item = QGraphicsPixmapItem(scaled_pixmap)
             self.scene.addItem(self.map_item)
@@ -132,7 +143,7 @@ class MyTableModel(QAbstractTableModel):
     def __init__(self, data=None, parent=None):
         super(MyTableModel, self).__init__(parent)
         self._data = data if data is not None else []
-        self.headers = ["x", "y"]
+        self.headers = ["Lon", "Lat"]
         self.highlight_row = -1 # "Go" komudu verildiğinde doğru satırın etkilenmesini sağlayacak değişken
         
     def rowCount(self, parent=QModelIndex()):

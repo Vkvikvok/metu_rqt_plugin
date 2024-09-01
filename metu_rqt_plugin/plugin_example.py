@@ -1,17 +1,18 @@
+from rqt_gui_py.plugin import Plugin
+from ament_index_python.packages import get_package_share_directory
+from python_qt_binding.QtWidgets import QApplication, QWidget, QGraphicsScene, QGraphicsView, QLineEdit, QHeaderView, QTableView, QGraphicsEllipseItem
+from python_qt_binding.QtGui import QDoubleValidator, QKeySequence, QImage, QPixmap, QBrush, QColor
+from python_qt_binding.QtCore import Qt, QPointF
+import rclpy
+from rclpy.context import Context
+# Özelleştirilmiş elemanlar
+from metu_rqt_plugin.widgets.custom_plugin_widgets_test import CustomGraphicsView, MyTableModel, CustomTableView
+from metu_rqt_plugin.ui.competition_map_ui import CompetitionMapUi
+from metu_rqt_plugin.threads.gui_gps_subscriber_thread import GPSSubscriberThread
+
 from rqt_gui.main import Main
 import sys
 import os
-from python_qt_binding.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget, QGridLayout, QCheckBox, QHBoxLayout
-from python_qt_binding.QtCore import QTimer, Qt
-from matplotlib.figure import Figure
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
-import random
-import rclpy
-from rclpy.context import Context
-from rqt_gui_py.plugin import Plugin
-# Özelleştirilmiş eleman
-from metu_rqt_plugin.threads.sensor_subscribers_thread import SensorSubscribersThread
 
 class SimplePlugin(Plugin):
     def __init__(self, context):
@@ -23,144 +24,194 @@ class SimplePlugin(Plugin):
         context.add_widget(self._widget)
 
     def shutdown_plugin(self):
+        # Widget'ı ve iş parçacığını durdur
         self._widget.shutdown()
-
-
-
-class SensorDataHandler:
-    def __init__(self, filename, data_name):
-        # Dosya adını ve yolunu belirleyin
-        self.filename = filename
-        with open(self.filename, 'a') as file:
-            file.write(f"{data_name}\n")
-
-    def write_data_to_file(self, data):
-        # Dosyaya yazma işlemi
-        with open(self.filename, 'a') as file:
-            file.write(f"{data}\n")
-
-
-
-
-
-class MplCanvas(FigureCanvas):
-    def __init__(self, title="", parent=None, width=3, height=2, dpi=100):
-        self.fig = Figure(figsize=(width, height), dpi=dpi)
-        self.axes = self.fig.add_subplot(111)
-        super(MplCanvas, self).__init__(self.fig)
-
-        self.xdata = [0]
-        self.ydata = [0]
-        self.autoscroll = True
-        self.xlim_window = 30
-        self.axes.set_title(title) 
-
-    def update_data(self, new_x, new_y):
-        self.xdata.append(new_x)
-        self.ydata.append(new_y)
-
-    def update_plot(self):
-        if not self.autoscroll:
-            return  # Autoscroll kapalıysa, grafiği güncellemeyi durdur
-
-        self.axes.clear()
-        self.axes.plot(self.xdata, self.ydata)
-
-        self.axes.set_xlim(left=max(0, self.xdata[-1] - self.xlim_window), right=self.xdata[-1] + 10)
-        self.draw()
-
-    def toggle_autoscroll(self, state):
-        self.autoscroll = state
-        if state and len(self.xdata) > 0:
-            # Autoscroll açıldığında, grafiği son noktaya kaydır
-            self.axes.set_xlim(left=max(0, self.xdata[-1] - self.xlim_window), right=self.xdata[-1] + 10)
-            self.draw()
-
-
-
 
 class MyWidget(QWidget):
     def __init__(self):
         super(MyWidget, self).__init__()
 
+        # Dönüştürülmüş UI'yi yükle
+        self.ui = CompetitionMapUi()  # Bu sınıf, pyuic5 tarafından oluşturulan sınıftır
+        self.ui.setupUi(self)  # Arayüz öğelerini bu widget üzerine kur
+
+        # Yarışma alanının haritasını gösteren parça
         try:
-            self.layout = QGridLayout(self)
+            self.scene = QGraphicsScene()
+            self.customCompetitionMap = CustomGraphicsView(self.scene, box_x=self.ui.send_x, box_y=self.ui.send_y)
 
-            self.canvases = []
-            self.counter_list = [1,1,1,1,1,1]
-            self.plot_names = ["Flamable Gas", "Methane Gas", "Carbon Monoxide", 
-                            "Env. Temperature", "Env. Pressure", "Env. Humidity"]
-            self.ROOT_DIR = "/home/volki/meturover_24/src/metu_rqt_plugin/metu_rqt_plugin/data_files" # Burası bilgisayara göre ayarlanacak
-            self.data_files = ["flamable_gas.txt", "methane_gas.txt", "carbon_monoxide.txt", "env_temperature.txt", "env_pressure.txt", "env_humidity"]
-            self.data_handlers = []
-            for i in range(6):
-                # Her bir sensör verisi için grafik yapısı oluşturuluyor
-                title = self.plot_names[i]
-                canvas = MplCanvas(title=title, width=3, height=2, dpi=100)
-                self.canvases.append(canvas)
+            # Layout'taki eski QGraphicsView'i kaldır ve yeni CustomGraphicsView'i ekle
+            layout = self.ui.competitionMap.parentWidget().layout() 
+            layout.replaceWidget(self.ui.competitionMap, self.customCompetitionMap)
+            self.ui.competitionMap.deleteLater()  # Orijinal QGraphicsView'i temizle
 
-                toolbar = NavigationToolbar(canvas, self)
+            # Görseli yükle
+            self.base_dir = os.path.dirname(os.path.abspath(__file__))
+            self.customCompetitionMap.load_image(os.path.join(self.base_dir,'images/new_map.jpg'))
 
-                # Checkbox'u toolbar'ın yanına ekliyoruz
-                checkbox = QCheckBox("Autoscroll")
-                checkbox.setChecked(True)
-                checkbox.stateChanged.connect(lambda state, c=canvas: c.toggle_autoscroll(state == Qt.Checked))
-
-                toolbar_layout = QHBoxLayout()
-                toolbar_layout.addWidget(toolbar)
-                toolbar_layout.addWidget(checkbox)
-
-                vbox = QVBoxLayout()
-                vbox.addLayout(toolbar_layout)
-                vbox.addWidget(canvas)
-
-                self.layout.addLayout(vbox, i // 2, i % 2)
-
-                # Her bir sensör verisini depolamak için .txt dosyası oluşturuluyor
-                file_path = os.path.join(self.ROOT_DIR, self.data_files[i])
-                handler = SensorDataHandler(file_path, title)
-                self.data_handlers.append(handler)
+            # Harita parametrelerini diğer nesneler için tanımlıyoruz
+            self.max_lat = self.customCompetitionMap.max_lat
+            self.min_lat = self.customCompetitionMap.min_lat
+            self.max_lon = self.customCompetitionMap.max_lon
+            self.min_lon = self.customCompetitionMap.min_lon
+            self.map_width = self.customCompetitionMap.map_item.pixmap().width()
+            self.map_height = self.customCompetitionMap.map_item.pixmap().height()
 
         except Exception as e:
-            print(f"There is an error in initialization of sensor plot plugin:{e}")
+            print(f"There is an error in loading competition map: {e}")
+
+
+        # Roverın gideceği konumların listesinin ayarlanması
+        try:
+            self.model = MyTableModel(self.max_lat, self.min_lat, self.max_lon, self.min_lon, self.map_width, self.map_height)    
+            self.locationList = CustomTableView()
+            self.locationList.setModel(self.model) # Özelleştirilmiş "QTableView" elemanını çağırıyoruz
+
+            # Layout'taki eski QTableView elemanını kaldır ve yeni CustomTableView elemanını ekle
+            layout = self.ui.location_widgets_layout
+            layout.replaceWidget(self.ui.location_list, self.locationList)
+            self.ui.location_list.deleteLater()  # Orijinal QTableView'i temizle
+
+            # Tablo sütunlarının arayüze daha uygun şekilde boyutlanmasını sağlar
+            self.locationList.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+
+            # Tablodan bir hücre seçildiği zaman tüm satırın seçilmesini sağlar
+            self.locationList.setSelectionMode(QTableView.SingleSelection)
+            self.locationList.setSelectionBehavior(QTableView.SelectRows)
+
+        except Exception as e:
+            print(f"There is an error in location list: {e}")
 
         try:
+        # x ve y verilerini alacağımız kutuların ayarlanması
+            validator = QDoubleValidator() # Sadece sayısal değerlerin girilmesini sağlar(e hariç)
+            self.ui.send_x.setValidator(validator)
+            self.ui.send_y.setValidator(validator)
+            
+            # "Send Location" butonunun düzenlenmesi
+            self.ui.send_location_button.setShortcut(QKeySequence("Enter")) # Enter kısayol olarak ayarlandı
+            self.ui.send_location_button.clicked.connect(self.sendLocation) # Gerekli fonksiyon atandı
+            
+            # "Go/Cancel" butonunun düzenlenmesi
+            self.ui.go_cancel_button.clicked.connect(self.toggle_row_highlight)
+            self.highlight = False
+
+        except Exception as e:
+            print(f"There is an error in coordination boxes:{e}")
+
+        # Harita üzerinde rover ve gidilecek konumların işlenmesi ve gösterilmesi
+        try:
+            # GPS sinyali ile roverın konumunu almak için GPSSubscriberThread başlatılıyor
             self.context = Context()
-            self.sensor_subcribers_thread = SensorSubscribersThread(self.context)
-            self.sensor_subcribers_thread.flamable_gas_signal.connect(self.send_data)
-            self.sensor_subcribers_thread.methane_gas_signal.connect(self.send_data)
-            self.sensor_subcribers_thread.carbon_mono_signal.connect(self.send_data)
-            self.sensor_subcribers_thread.env_temp_signal.connect(self.send_data)
-            self.sensor_subcribers_thread.env_pres_signal.connect(self.send_data)
-            self.sensor_subcribers_thread.env_humidity_signal.connect(self.send_data)
-            self.sensor_subcribers_thread.start()
+            self.gps_thread = GPSSubscriberThread(self.context, self.max_lat, self.min_lat, self.max_lon, 
+                                                  self.min_lon, self.map_width, self.map_height)
+            self.gps_thread.gps_signal.connect(self.update_position)  # Sinyali bağla
+            self.gps_thread.start()
+
+            # Roverın konumunu gösterecek markerın tanımlanması
+            self.rover_marker = None
+
+            # Tablonun değişme sinyali alınıp harita üzerinden noktalar yenileniyor
+            self.model.dataChanged.connect(self.update_graphics_view)
 
         except Exception as e:
-            print(f"There is an error in starting sensor subscribers thread:{e}")
+            print(f"There is an error in presentation of location points and rover location:{e}")
+     
 
+    # Harita üzerindeki konum noktaları güncelleniyor
+    def update_graphics_view(self):
+        print("Veriler değiştirildi")
+        data = [self.model.pixel_data[i] for i in range(self.model.rowCount())]##############
+        self.customCompetitionMap.update_points(data)
+
+    # Roverın konumu güncelleniyor
+    def update_position(self, x_pixel, y_pixel, lon, lat):
         try:
-            self.timer = QTimer()
-            self.timer.setInterval(1000)  # 1 saniye
-            self.timer.timeout.connect(self.update_plots)
-            self.timer.start()
+            if self.rover_marker is None:
+                self.rover_marker = QGraphicsEllipseItem(-5, -5, 10, 10)  # Marker size x_pixel, y_pixel
+                self.rover_marker.setBrush(QBrush(QColor('blue')))
+                self.customCompetitionMap.scene.addItem(self.rover_marker)
+                print("Rover markerı oluşturuldu")
+            else:
+                scene_rect = self.customCompetitionMap.sceneRect()  # Sahne dikdörtgeni
+
+                # Piksel koordinatlarını sahne koordinatlarına manuel olarak dönüştür
+                scene_x = (x_pixel / self.customCompetitionMap.map_item.pixmap().width()) * scene_rect.width()
+                scene_y = (y_pixel / self.customCompetitionMap.map_item.pixmap().height()) * scene_rect.height()
+                scene_point = QPointF(scene_x, scene_y)
+                self.rover_marker.setPos(scene_point) 
+                
+            self.ui.current_coordinates_label.setText(f"Lon: {lon:.4f}   Lat: {lat:.4f}")
+        except Exception as e:
+            print(f"There is an error in updating rover marker position:{e}")
+        
+    # "Go/Cancel" butonunun tetiklediği fonksiyon
+    # İlk tıklandığında rover ilk satırdaki konuma gitmeye başlar ve bu sırada gittiği konum tabloda yeşil renk ile gözükür
+    # İkinci kere tıklandığında ise bu eylem iptal edilir
+    def toggle_row_highlight(self):
+        if self.highlight:
+            self.model.set_highlight_row(-1)
+            self.ui.go_cancel_button.setText("Go")
+        else:
+            self.model.set_highlight_row(0)  # 0, birinci satırı belirtir
+            self.ui.go_cancel_button.setText('Cancel')
+        self.highlight = not self.highlight
+
+    def sendLocation(self): 
+        try:
+            # x ve y verileri çekilip satır formatına getirildi
+            send_lon_data = float(self.ui.send_x.text())
+            send_lat_data = float(self.ui.send_y.text())
+
+            
+            new_row = [send_lon_data, send_lat_data]
+
+            # Kutucukların boş olup olmadığı kontrol edilir ve verinin gönderildiği durumda kutucuklar temizlenir
+            if send_lon_data != None and send_lat_data != None:
+                self.model.addData(new_row)
+                x, y = self.customCompetitionMap.gps_to_pixel(send_lat_data, send_lon_data)
+                self.customCompetitionMap.add_point(x, y, str(self.model.rowCount()))   
+                self.ui.send_x.clear()
+                self.ui.send_y.clear()
+
+            else:
+                return None
         
         except Exception as e:
-            print(f"There is an error in timer:{e}")
+            print(f"There is an error in sending the location: {e}")
 
-    def send_data(self, id, data):
-        self.counter_list[id] += 1
-        self.canvases[id].update_data(self.counter_list[id], data)
-        self.data_handlers[id].write_data_to_file(data)
-        print(f"{id} indeksli grafiğe {self.counter_list[id]} zamanında {data} verisi gönderildi")
+    # "Delete" tuşuna basıldığında tabloda seçilmiş satır silinir
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Delete:
+            self.delete_selected_rows()
 
+    def delete_selected_rows(self):
+        try:
+            selection_model = self.locationList.selectionModel()
+            selected_indexes = selection_model.selectedRows()
+            row = selected_indexes[0].row()
+            self.model.removeRow(row)
+            self.locationList.selectionModel().clearSelection()
+            self.customCompetitionMap.remove_point(row) # Noktanın silinmesi
+            self.update_graphics_view() # Haritanın güncellenmesi
+    
+        except Exception as e:
+            print(f"There is an error in delete_selected_rows: {e}")
 
-    def update_plots(self):
-        for canvas in self.canvases:
-            canvas.update_plot()
+    # Tablo dışında bir yere dokunulduğunda tablodaki seçim iptal edilir
+    def mousePressEvent(self, event):
+        if self.locationList.rect().contains(event.pos()):
+            # Tıklama tablo üzerinde ise, herhangi bir işlem yapılmaz
+            self.customCompetitionMap.update_labels()
+            super().mousePressEvent(event)
+        else:
+            # Tıklama tablo dışında ise, tablo seçimini temizleyin
+            self.locationList.selectionModel().clearSelection()
+
 
     def shutdown(self):
         # İş parçacığını durdur
-        self.sensor_subcribers_thread.stop()
+        self.gps_thread.stop()
 
 
 def main():

@@ -5,9 +5,9 @@ from PyQt5.QtCore import QThread, pyqtSignal
 from rclpy.executors import SingleThreadedExecutor
         
 class GPSSubscriberThread(QThread):
-    gps_signal = pyqtSignal(float, float)  # PyQt5'te veri iletmek için sinyal
+    gps_signal = pyqtSignal(float, float, float, float)  # PyQt5'te veri iletmek için sinyal
 
-    def __init__(self, context, map_width, map_height): 
+    def __init__(self, context, max_lat, min_lat, max_lon, min_lon, map_width, map_height): 
         super(GPSSubscriberThread, self).__init__()
         self.context = context
         
@@ -16,14 +16,12 @@ class GPSSubscriberThread(QThread):
         
         print("GPS Subscriber Thread started")
 
-        # Harita hakkındaki veriler burada güncellenip öyle kullanılacak
-        self.map_width = map_width # Kullanılan harita fotoğrafının piksel değerinden genişliği ve uzunluğu
+        self.map_width = map_width 
         self.map_height = map_height
-        # Burada enlemleri ters tanımlamamın sebebi piksellerin de koordinat sisteminin gps enlemine göre ters olması
-        self.max_lat = -50 # Haritanın sol üst köşesinin derece cinsinden enlemi(Kuzey negatif, Güney pozitif)
-        self.min_lat = -40 # Haritanın sağ alt köşesinin derece cinsinden enlemi
-        self.min_lon = 20 # Haritanın sol üst köşesinin derece cinsinden boylamı(Doğu pozitif, Batı negatif)
-        self.max_lon = 35 # Haritanın sağ alt köşesinin derece cinsinden boylamı
+        self.max_lat = max_lat
+        self.min_lat = min_lat
+        self.min_lon = min_lon
+        self.max_lon = max_lon
 
     def run(self):
         try:
@@ -79,4 +77,4 @@ class GPSSubscriberThread(QThread):
         x_pixel, y_pixel = self.gps_to_pixel(msg.latitude, msg.longitude, self.map_width,
                                              self.map_height, self.max_lat, self.min_lat, self.max_lon, self.min_lon)
         print(f"GPS verileri piksellere dönüştürüldü: {x_pixel}, {y_pixel}")
-        self.gps_signal.emit(x_pixel, y_pixel)
+        self.gps_signal.emit(x_pixel, y_pixel, msg.longitude, msg.latitude)

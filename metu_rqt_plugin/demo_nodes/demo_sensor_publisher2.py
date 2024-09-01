@@ -6,8 +6,8 @@ import random
 class DemoSensorPublisher(Node):
 
     def __init__(self):
-        super().__init__('demo_sensor_publisher')
-        self.publisher_ = self.create_publisher(Float64, 'flamable_gas', 10)
+        super().__init__('demo_sensor_publisher2')
+        self.publisher_ = self.create_publisher(Float64, 'methane_gas', 10)
         timer_period = 1.0  # seconds
         self.timer = self.create_timer(timer_period, self.publish_random_float)
         self.get_logger().info('RandomFloatPublisher node has been started.')

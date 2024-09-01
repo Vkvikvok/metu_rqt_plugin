@@ -35,4 +35,27 @@
     </qtgui>
   </class>
 
+  <class name="Sensor Plots" type="metu_rqt_plugin.sensor_plot_plugin.SensorPlotPlugin" base_class_type="rqt_gui_py::Plugin">
+    <description>
+      Sensörlerden gelen verilerin grafiklere döküldüğü bir eklenti
+    </description>
+    <qtgui>
+      <group>
+        <label>Rover</label>
+      </group>
+      <label>Sensor Plots</label>
+    </qtgui>
+  </class>
+
+  <class name="Science Hub Controller" type="metu_rqt_plugin.sci_hub_controller_plugin.SciHubController" base_class_type="rqt_gui_py::Plugin">
+    <description>
+      Bilim mekanizması için oluşturulmuş bir kontrol paneli
+    </description>
+    <qtgui>
+      <group>
+        <label>Rover</label>
+      </group>
+      <label>Sci Hub Controller</label>
+    </qtgui>
+  </class>
 </library>

@@ -6,9 +6,9 @@ from python_qt_binding.QtCore import Qt, QPointF
 import rclpy
 from rclpy.context import Context
 # Özelleştirilmiş elemanlar
-from metu_rqt_plugin.custom_plugin_widgets import CustomGraphicsView, MyTableModel, CustomTableView
+from metu_rqt_plugin.widgets.custom_plugin_widgets import CustomGraphicsView, MyTableModel, CustomTableView
 from metu_rqt_plugin.ui.competition_map_ui import CompetitionMapUi
-from metu_rqt_plugin.gui_gps_subscriber_thread import GPSSubscriberThread
+from metu_rqt_plugin.threads.gui_gps_subscriber_thread import GPSSubscriberThread
 
 from rqt_gui.main import Main
 import sys
@@ -46,7 +46,8 @@ class MyWidget(QWidget):
             self.ui.competitionMap.deleteLater()  # Orijinal QGraphicsView'i temizle
 
             # Görseli yükle
-            self.customCompetitionMap.load_image('/home/volki/meturover_24/src/metu_rqt_plugin/metu_rqt_plugin/images/new_map.jpg')
+            self.base_dir = os.path.dirname(os.path.abspath(__file__))
+            self.customCompetitionMap.load_image(os.path.join(self.base_dir,'images/new_map.jpg'))
 
         except Exception as e:
             print(f"There is an error in loading competition map: {e}")

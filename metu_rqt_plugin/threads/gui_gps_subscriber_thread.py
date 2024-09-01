@@ -2,7 +2,7 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import NavSatFix
 from PyQt5.QtCore import QThread, pyqtSignal
-from rclpy.executors import MultiThreadedExecutor
+from rclpy.executors import SingleThreadedExecutor
         
 class GPSSubscriberThread(QThread):
     gps_signal = pyqtSignal(float, float)  # PyQt5'te veri iletmek için sinyal
@@ -14,7 +14,6 @@ class GPSSubscriberThread(QThread):
         self.node = None
         self.executor = None
         
-
         print("GPS Subscriber Thread started")
 
         # Harita hakkındaki veriler burada güncellenip öyle kullanılacak
@@ -28,15 +27,13 @@ class GPSSubscriberThread(QThread):
 
     def run(self):
         try:
-            
             rclpy.init(context = self.context)
             
-
             # ROS2 düğümünü doğrudan iş parçacığı içinde oluşturun
             self.node = Node('gui_gps_subscriber', context=self.context)
             
-            # Kapanma esnasında sıkıntı çıkmaması için "MultiThreadedExecutor" kullanılıyor
-            self.executor = MultiThreadedExecutor(context=self.context)
+            # Kapanma esnasında sıkıntı çıkmaması için "SingleThreadedExecutor" kullanılıyor
+            self.executor = SingleThreadedExecutor(context=self.context)
             self.executor.add_node(self.node)
             
 
@@ -47,15 +44,11 @@ class GPSSubscriberThread(QThread):
                 self.listener_callback,
                 10
             )
-
-            # ROS2 düğümünü döngüde çalıştırın
-            #rclpy.spin(self.node)
-            while rclpy.ok():
-                self.executor.spin_once(timeout_sec=0.1)
+            
+            self.executor.spin()
         
         except Exception as e:
             print(f"There is an error in gps subscriber thread:{e}")
-        
         
         finally:
             self.stop()
@@ -78,7 +71,7 @@ class GPSSubscriberThread(QThread):
             self.quit()
 
         except Exception as e:
-            print("There is an error in closing gps subscriber thread:{e}")
+            print(f"There is an error in closing gps subscriber thread:{e}")
 
     def listener_callback(self, msg):
         

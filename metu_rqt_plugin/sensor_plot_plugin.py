@@ -13,10 +13,10 @@ from rqt_gui_py.plugin import Plugin
 # Özelleştirilmiş eleman
 from metu_rqt_plugin.threads.sensor_subscribers_thread import SensorSubscribersThread
 
-class SimplePlugin(Plugin):
+class SensorPlotPlugin(Plugin):
     def __init__(self, context):
-        super(SimplePlugin, self).__init__(context)
-        self.setObjectName('SimplePlugin')
+        super(SensorPlotPlugin, self).__init__(context)
+        self.setObjectName('SensorPlotPlugin')
 
         # Ana widget'ı oluştur ve ayarlarını yap
         self._widget = MyWidget()
@@ -38,8 +38,6 @@ class SensorDataHandler:
         # Dosyaya yazma işlemi
         with open(self.filename, 'a') as file:
             file.write(f"{data}\n")
-
-
 
 
 
@@ -76,9 +74,6 @@ class MplCanvas(FigureCanvas):
             self.axes.set_xlim(left=max(0, self.xdata[-1] - self.xlim_window), right=self.xdata[-1] + 10)
             self.draw()
 
-
-
-
 class MyWidget(QWidget):
     def __init__(self):
         super(MyWidget, self).__init__()
@@ -87,10 +82,10 @@ class MyWidget(QWidget):
             self.layout = QGridLayout(self)
 
             self.canvases = []
-            self.counter_list = [1,1,1,1,1,1]
+            self.counter_list = [0,0,0,0,0,0]
             self.plot_names = ["Flamable Gas", "Methane Gas", "Carbon Monoxide", 
                             "Env. Temperature", "Env. Pressure", "Env. Humidity"]
-            self.ROOT_DIR = "/home/volki/meturover_24/src/metu_rqt_plugin/metu_rqt_plugin/data_files" # Burası bilgisayara göre ayarlanacak
+            self.base_dir = os.path.dirname(os.path.abspath(__file__))
             self.data_files = ["flamable_gas.txt", "methane_gas.txt", "carbon_monoxide.txt", "env_temperature.txt", "env_pressure.txt", "env_humidity"]
             self.data_handlers = []
             for i in range(6):
@@ -116,8 +111,8 @@ class MyWidget(QWidget):
 
                 self.layout.addLayout(vbox, i // 2, i % 2)
 
-                # Her bir sensör verisini depolamak için .txt dosyası oluşturuluyor
-                file_path = os.path.join(self.ROOT_DIR, self.data_files[i])
+                # Her bir sensör verisini depolamak için .txt dosyası oluşturuyoruz
+                file_path = os.path.join(self.base_dir, "data_files", self.data_files[i])
                 handler = SensorDataHandler(file_path, title)
                 self.data_handlers.append(handler)
 

@@ -10,65 +10,61 @@ import sys
 import os
 # Özelleştirilmiş elemanlar
 from metu_rqt_plugin.ui.topic_controller_ui import Ui_TopicController
-from metu_rqt_plugin.custom_plugin_widgets import CustomListView
+from metu_rqt_plugin.widgets.custom_plugin_widgets import CustomListView
+from metu_rqt_plugin.threads.topic_listener_thread import TopicListenerThread
 
 class TopicController(Plugin):
     def __init__(self, context):
         super(TopicController, self).__init__(context)
         self.setObjectName('TopicController')
 
-
-        # Rclpy'ı başlat ve context i çek(Threading için)
-        self.context = Context()
-
-        rclpy.init(context=self.context)
-
-        # Topicleri dinleyebilecek bir node oluşturuyoruz
-        self.node = rclpy.create_node('topic_listener_plugin_node')
-
-
         # Ana widget'ı oluştur ve ayarlarını yap
-        self._widget = MyWidget(self.context, self.node)
+        self._widget = MyWidget()
         context.add_widget(self._widget)
 
-        # ROS2 context'i kapat
-        rclpy.shutdown(context=self.context)
+    def shutdown_plugin(self):
+        self._widget.shutdown()
 
 class MyWidget(QWidget):
-    def __init__(self, context, node):
+    def __init__(self):
         super(MyWidget, self).__init__()
 
-        self.context = context # ROS2 contextinin çekilmesi
+        try:
+            # Dönüştürülmüş UI'yi yükle
+            self.ui = Ui_TopicController()  # Bu sınıf, pyuic5 tarafından oluşturulan sınıftır
+            self.ui.setupUi(self)  # Arayüz öğelerini bu widget üzerine kur
+            self.topic_input = self.ui.lineEdit
+            self.add_button = self.ui.pushButton
 
-        self.node = node
-        
-        # Dönüştürülmüş UI'yi yükle
-        self.ui = Ui_TopicController()  # Bu sınıf, pyuic5 tarafından oluşturulan sınıftır
-        self.ui.setupUi(self)  # Arayüz öğelerini bu widget üzerine kur
-        self.topic_input = self.ui.lineEdit
-        self.add_button = self.ui.pushButton
+            # Liste elemanı için ayarlamalar
+            self.model = QStandardItemModel(self)
+            self.customListView = CustomListView(self.model)
 
-        # Liste elemanı için ayarlamalar
-        self.model = QStandardItemModel(self)
-        self.customListView = CustomListView(self.model)
+            # Layout'taki eski QGraphicsView'i kaldır ve yeni CustomGraphicsView'i ekle
+            layout = self.ui.listView.parentWidget().layout() 
+            layout.replaceWidget(self.ui.listView, self.customListView)
+            self.ui.listView.deleteLater()  # Orijinal QGraphicsView'i temizle
 
-        # Layout'taki eski QGraphicsView'i kaldır ve yeni CustomGraphicsView'i ekle
-        layout = self.ui.listView.parentWidget().layout() 
-        layout.replaceWidget(self.ui.listView, self.customListView)
-        self.ui.listView.deleteLater()  # Orijinal QGraphicsView'i temizle
+            # Topic adını gireceğimiz kısmın ayarları
+            self.topic_input.setPlaceholderText("Enter ROS topic name")
 
-        # Topic adını gireceğimiz kısmın ayarları
-        self.topic_input.setPlaceholderText("Enter ROS topic name")
+            # QPushButton: Topic adını listeye eklemek için
+            self.add_button.setText("Add Topic")
+            self.add_button.clicked.connect(self.add_topic)
+            self.add_button.setShortcut("Enter")
 
-        # QPushButton: Topic adını listeye eklemek için
-        self.add_button.setText("Add Topic")
-        self.add_button.clicked.connect(self.add_topic)
-        self.add_button.setShortcut("Enter")
+        except Exception as e:
+            print(f"There is an error in initialization of ui: {e}")
 
-        # Zamanlayıcıyı oluşturuyoruz
-        self.timer = QTimer()
-        self.timer.timeout.connect(self.check_topics)
-        self.timer.start(2000)  # 2000 milisaniye (2 saniye) aralıklarla kontrol fonksiyonunu çalıştırır
+        # Topic listesinin çekilebilmesi için iş parçacığını başlatıyoruz
+        try:
+            self.context = Context()
+            self.topic_listener_thread = TopicListenerThread(self.context)
+            self.topic_listener_thread.topic_list_signal.connect(self.check_topics) # Sinyali fonksiyona bağlıyoruz
+            self.topic_listener_thread.start()
+
+        except Exception as e:
+            print(f"There is an error in starting topic listener thread: {e}")
 
     def add_topic(self):
         # QLineEdit'e girilen text'i alıyoruz
@@ -82,35 +78,26 @@ class MyWidget(QWidget):
             # Topic adını listeye ekliyoruz
             item = QStandardItem(edited_topic_name)
             
-            # Topic adı ilk girildiğinde aktif olup olmadığına göre renklendirme
-            if edited_topic_name in self.get_all_topics():
-                item.setBackground(QBrush(Qt.green))
-            else:
-                item.setBackground(QBrush(Qt.red))
-
             # Modeli güncelliyoruz
             self.model.appendRow(item)           
             
             # Girdi alanını temizliyoruz
             self.topic_input.clear()
-
-    # ROS 2'den topic'leri alıyoruz
-    def get_all_topics(self):
-        topic_list = self.node.get_topic_names_and_types()
-        topic_names = [name for name, _ in topic_list]
-
-        return topic_names
     
     # Topiclerin aktifliğinin sürekli şekilde kontrol edildiği fonksiyon
-    def check_topics(self):
+    def check_topics(self, topic_list):
         for row in range(self.model.rowCount()):
             item = self.model.item(row)
             if item is not None:
                 topic_name = item.text()
-                if topic_name in self.get_all_topics():
+                if topic_name in topic_list:
                     item.setBackground(QBrush(Qt.green))
                 else:
                     item.setBackground(QBrush(Qt.red))
+
+    def shutdown(self):
+        # İş parçacığını durdur
+        self.topic_listener_thread.stop()
 
 def main():
     sys.exit(Main().main(sys.argv, standalone="metu_rqt_plugin.topic_controller_plugin"))

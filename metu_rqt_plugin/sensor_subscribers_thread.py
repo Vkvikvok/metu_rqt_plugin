@@ -70,7 +70,7 @@ class SensorSubscribersThread(QThread):
             )
 
             self.executor.spin()
-
+            print("Executor başlatıldı")
         except Exception as e:
             print(f"There is an error in sensor subscribers thread:{e}")
 

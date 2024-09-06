@@ -6,9 +6,9 @@ from python_qt_binding.QtCore import Qt, QPointF
 import rclpy
 from rclpy.context import Context
 # Özelleştirilmiş elemanlar
-from metu_rqt_plugin.widgets.custom_plugin_widgets_test import CustomGraphicsView, MyTableModel, CustomTableView
-from metu_rqt_plugin.ui.competition_map_ui import CompetitionMapUi
-from metu_rqt_plugin.threads.gui_gps_subscriber_thread import GPSSubscriberThread
+from .custom_plugin_widgets import CustomGraphicsView, MyTableModel, CustomTableView
+from .competition_map_ui import CompetitionMapUi
+from .gui_gps_subscriber_thread import GPSSubscriberThread
 
 from rqt_gui.main import Main
 import sys
@@ -47,7 +47,7 @@ class MyWidget(QWidget):
 
             # Görseli yükle
             self.base_dir = os.path.dirname(os.path.abspath(__file__))
-            self.customCompetitionMap.load_image(os.path.join(self.base_dir,'images/new_map.jpg'))
+            self.customCompetitionMap.load_image(os.path.join(self.base_dir,'mars_yard.jpeg'))
 
             # Harita parametrelerini diğer nesneler için tanımlıyoruz
             self.max_lat = self.customCompetitionMap.max_lat
@@ -141,7 +141,7 @@ class MyWidget(QWidget):
                 scene_point = QPointF(scene_x, scene_y)
                 self.rover_marker.setPos(scene_point) 
                 
-            self.ui.current_coordinates_label.setText(f"Lon: {lon:.4f}   Lat: {lat:.4f}")
+            self.ui.current_coordinates_label.setText(f"Lon: {lon:.6f}   Lat: {lat:.6f}")
         except Exception as e:
             print(f"There is an error in updating rover marker position:{e}")
         

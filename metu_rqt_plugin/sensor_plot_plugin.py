@@ -49,6 +49,7 @@ class MplCanvas(FigureCanvas):
 
         self.xdata = [0]
         self.ydata = [0]
+        self.title = title
         self.autoscroll = True
         self.xlim_window = 30
         self.axes.set_title(title) 
@@ -56,6 +57,7 @@ class MplCanvas(FigureCanvas):
     def update_data(self, new_x, new_y):
         self.xdata.append(new_x)
         self.ydata.append(new_y)
+        
 
     def update_plot(self):
         if not self.autoscroll:
@@ -63,6 +65,7 @@ class MplCanvas(FigureCanvas):
 
         self.axes.clear()
         self.axes.plot(self.xdata, self.ydata)
+        self.axes.set_title(self.title)
 
         self.axes.set_xlim(left=max(0, self.xdata[-1] - self.xlim_window), right=self.xdata[-1] + 10)
         self.draw()

@@ -10,10 +10,10 @@ class GPSPublisher(Node):
         self.timer = self.create_timer(timer_period, self.publish_gps_data)
 
         ###################
-        self.latitude = 45.0 # Başlangıç Noktası
-        self.longitude = 27.50  # Başlangıç Noktası
+        self.latitude = 50.065984 # Başlangıç Noktası
+        self.longitude = 19.913646  # Başlangıç Noktası
         self.lat_step = 0 # Enlemde hareket (Kuzeyden Güneye)
-        self.lon_step = 0.05   # Boylamda hareket (Batıdan Doğuya)
+        self.lon_step = 0  # Boylamda hareket (Batıdan Doğuya)
         ###################
 
         self.get_logger().info("Rover GPS publisher has been started")
@@ -35,9 +35,9 @@ class GPSPublisher(Node):
         self.longitude += self.lon_step
 
         # Hareket sınırları kontrolü
-        if self.latitude < 41.0 or self.longitude > 34.0:
-            self.lat_step = -self.lat_step  # Geri dönüş
-            self.lon_step = -self.lon_step  # Geri dönüş
+        #if self.latitude < -50.066325 or self.longitude > 19.913640:
+         #   self.lat_step = -self.lat_step  # Geri dönüş
+        #    self.lon_step = -self.lon_step  # Geri dönüş
         ########################
 
 def main(args=None):

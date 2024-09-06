@@ -47,7 +47,15 @@ class MyWidget(QWidget):
 
             # Görseli yükle
             self.base_dir = os.path.dirname(os.path.abspath(__file__))
-            self.customCompetitionMap.load_image(os.path.join(self.base_dir,'new_map.jpg'))
+            self.customCompetitionMap.load_image(os.path.join(self.base_dir,'mars_yard.jpeg'))
+
+            # Harita parametrelerini diğer nesneler için tanımlıyoruz
+            self.max_lat = self.customCompetitionMap.max_lat
+            self.min_lat = self.customCompetitionMap.min_lat
+            self.max_lon = self.customCompetitionMap.max_lon
+            self.min_lon = self.customCompetitionMap.min_lon
+            self.map_width = self.customCompetitionMap.map_item.pixmap().width()
+            self.map_height = self.customCompetitionMap.map_item.pixmap().height()
 
         except Exception as e:
             print(f"There is an error in loading competition map: {e}")
@@ -55,7 +63,7 @@ class MyWidget(QWidget):
 
         # Roverın gideceği konumların listesinin ayarlanması
         try:
-            self.model = MyTableModel()
+            self.model = MyTableModel(self.max_lat, self.min_lat, self.max_lon, self.min_lon, self.map_width, self.map_height)    
             self.locationList = CustomTableView()
             self.locationList.setModel(self.model) # Özelleştirilmiş "QTableView" elemanını çağırıyoruz
 
@@ -95,9 +103,8 @@ class MyWidget(QWidget):
         try:
             # GPS sinyali ile roverın konumunu almak için GPSSubscriberThread başlatılıyor
             self.context = Context()
-            self.gps_thread = GPSSubscriberThread(self.context, 
-                                                  self.customCompetitionMap.map_item.pixmap().width(), 
-                                                  self.customCompetitionMap.map_item.pixmap().height())
+            self.gps_thread = GPSSubscriberThread(self.context, self.max_lat, self.min_lat, self.max_lon, 
+                                                  self.min_lon, self.map_width, self.map_height)
             self.gps_thread.gps_signal.connect(self.update_position)  # Sinyali bağla
             self.gps_thread.start()
 
@@ -114,7 +121,7 @@ class MyWidget(QWidget):
     # Harita üzerindeki konum noktaları güncelleniyor
     def update_graphics_view(self):
         print("Veriler değiştirildi")
-        data = [self.model._data[i] for i in range(self.model.rowCount())]
+        data = [self.model.pixel_data[i] for i in range(self.model.rowCount())]##############
         self.customCompetitionMap.update_points(data)
 
     # Roverın konumu güncelleniyor
@@ -134,7 +141,7 @@ class MyWidget(QWidget):
                 scene_point = QPointF(scene_x, scene_y)
                 self.rover_marker.setPos(scene_point) 
                 
-            self.ui.current_coordinates_label.setText(f"Lon: {lon:.4f}   Lat: {lat:.4f}")
+            self.ui.current_coordinates_label.setText(f"Lon: {lon:.6f}   Lat: {lat:.6f}")
         except Exception as e:
             print(f"There is an error in updating rover marker position:{e}")
         
